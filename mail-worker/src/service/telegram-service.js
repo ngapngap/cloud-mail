@@ -44,48 +44,60 @@ const telegramService = {
 	},
 
 	async sendEmailToBot(c, email) {
+    const { tgBotToken, tgChatId, customDomain, tgMsgTo, tgMsgFrom, tgMsgText } = await settingService.query(c);
 
-		const { tgBotToken, tgChatId, customDomain, tgMsgTo, tgMsgFrom, tgMsgText } = await settingService.query(c);
+    // ✅ Fix 1: Trim whitespace và convert sang number
+    const tgChatIds = tgChatId.split(',').map(id => {
+        const trimmedId = id.trim();
+        return isNaN(trimmedId) ? trimmedId : Number(trimmedId);
+    });
 
-		const tgChatIds = tgChatId.split(',');
+    const jwtToken = await jwtUtils.generateToken(c, { emailId: email.emailId })
+    const webAppUrl = customDomain ? `${domainUtils.toOssDomain(customDomain)}/api/telegram/getEmail/${jwtToken}` : null;
 
-		const jwtToken = await jwtUtils.generateToken(c, { emailId: email.emailId })
+    await Promise.all(tgChatIds.map(async chatId => {
+        try {
+            // ✅ Fix 2: Validate trước khi gửi
+            if (!webAppUrl) {
+                console.error(`Telegram notification skipped: no customDomain configured`);
+                return;
+            }
 
-		const webAppUrl = customDomain ? `${domainUtils.toOssDomain(customDomain)}/api/telegram/getEmail/${jwtToken}` : 'https://www.cloudflare.com/404'
+            const messageText = emailMsgTemplate(email, tgMsgTo, tgMsgFrom, tgMsgText);
+            
+            // ✅ Fix 3: Truncate message nếu quá dài (Telegram limit 4096)
+            const truncatedText = messageText.substring(0, 4096);
 
-		await Promise.all(tgChatIds.map(async chatId => {
-			try {
-				const res = await fetch(`https://api.telegram.org/bot${tgBotToken}/sendMessage`, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						chat_id: chatId,
-						parse_mode: 'HTML',
-						text: emailMsgTemplate(email, tgMsgTo, tgMsgFrom, tgMsgText),
-						reply_markup: {
-							inline_keyboard: [
-								[
-									{
-										text: 'Xem',
-										web_app: { url: webAppUrl }
-									}
-								]
-							]
-						}
-					})
-				});
-				if (!res.ok) {
-					console.error(`转发 Telegram 失败: chatId=${chatId}, 状态码=${res.status}`);
-				}
-			} catch (e) {
-				console.error(`转发 Telegram 失败: chatId=${chatId}`, e.message);
-			}
-		}));
+            const res = await fetch(`https://api.telegram.org/bot${tgBotToken}/sendMessage`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: Number(chatId),  // ✅ Ensure number type
+                    parse_mode: 'HTML',
+                    text: truncatedText,
+                    reply_markup: {
+                        inline_keyboard: [
+                            [
+                                {
+                                    text: 'Xem',
+                                    web_app: { url: webAppUrl }
+                                }
+                            ]
+                        ]
+                    }
+                })
+            });
 
-	}
-
+            if (!res.ok) {
+                const errorText = await res.text();
+                console.error(`Telegram failed: chatId=${chatId}, status=${res.status}, error=${errorText}`);
+            }
+        } catch (e) {
+            console.error(`Telegram forward failed: chatId=${chatId}`, e.message);
+        }
+    }));
 }
 
 export default telegramService
