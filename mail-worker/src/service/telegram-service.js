@@ -99,5 +99,5 @@ const telegramService = {
         }
     }));
 }
-
+}
 export default telegramService
