@@ -1,3 +1,4 @@
+99
 name: 🚀 Deploy cloud-mail to Cloudflare Workers
 
 on:
@@ -96,8 +97,7 @@ jobs:
 
           echo "🔒 Setting Worker secrets..."
           echo "🚀 Configuration updated. Starting deployment..."
-          npx wrangler deploy -c "$CONFIG_FILE" | tee deploy.log | grep -v "https://.*\.workers\.dev"
-          WORKER_URL=$(grep -o "https://.*\.workers\.dev" deploy.log)
+npx wrangler deploy | tee deploy.log | grep -v "https://.*\.workers\.dev"          WORKER_URL=$(grep -o "https://.*\.workers\.dev" deploy.log)
           echo "::add-mask::$WORKER_URL"
           echo "worker_url=$WORKER_URL" >> $GITHUB_OUTPUT
           echo "✅ Deployment command executed."
