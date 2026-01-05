@@ -6,6 +6,7 @@ on:
     paths:
       - "mail-worker/**"
       - "mail-vue/**"
+          - "DEPLOY_TRIGGER"
   workflow_dispatch:
 
 jobs:
