@@ -45,6 +45,7 @@ const telegramService = {
 
 	async sendEmailToBot(c, email) {
 	   const { tgBotToken, tgChatId, customDomain, tgMsgTo, tgMsgFrom, tgMsgText } = await settingService.query(c);
+	   console.log('[tg] settings', { tgChatId, hasToken: !!tgBotToken, customDomain, tgMsgTo, tgMsgFrom, tgMsgText });
 
 	   const toTelegramHtml = (content = '') => {
 	       return content
@@ -80,6 +81,8 @@ const telegramService = {
             const safeHtml = toTelegramHtml(htmlMessage)
                 .replace(/\n{3,}/g, '\n\n')
                 .trim();
+
+            console.log('[tg] sending', { chatId, webAppUrl, len: safeHtml.length });
  
             const res = await fetch(`https://api.telegram.org/bot${tgBotToken}/sendMessage`, {
                 method: 'POST',
@@ -106,6 +109,8 @@ const telegramService = {
             if (!res.ok) {
                 const errorText = await res.text();
                 console.error(`Telegram failed: chatId=${chatId}, status=${res.status}, response=${errorText}`);
+            } else {
+                console.log('[tg] sent ok', { chatId, status: res.status });
             }
         } catch (e) {
             console.error(`Telegram forward failed: chatId=${chatId}`, e.message);
