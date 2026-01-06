@@ -5,16 +5,18 @@ export default function emailMsgTemplate(email, tgMsgTo, tgMsgFrom, tgMsgText) {
     template += `<br>Người gửi: ${email.name}`
   }
   if (tgMsgFrom === 'show') {
-    template += `<br>Người gửi: ${email.name} <${email.sendEmail}>`
+    const fromName = email.name || '';
+    const fromEmail = email.sendEmail || email.from || '';
+    template += `<br>Người gửi: ${fromName}${fromEmail ? ` <${fromEmail}>` : ''}`;
   }
   if(tgMsgTo === 'show' && tgMsgFrom === 'hide') {
     template += `<br>Người nhận: \u200B${email.toEmail}`
   } else if(tgMsgTo === 'show') {
     template += `<br>Người nhận: \u200B${email.toEmail}`
   }
-  const text = (email.text || emailUtils.htmlToText(email.content))
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  const text = (email.text || emailUtils.htmlToText(email.content || ''))
+    .replace(/</g, '<')
+    .replace(/>/g, '>');
   if(tgMsgText === 'show') {
     template += `<br>${text}`
   }
