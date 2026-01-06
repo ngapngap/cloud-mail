@@ -74,8 +74,8 @@ const telegramService = {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    chat_id: Number(chatId),  // ✅ Ensure number type
-                    parse_mode: 'HTML',
+                    chat_id: Number(chatId),
+                    // Gửi plain text để tránh lỗi parse_mode với thẻ br
                     text: truncatedText,
                     reply_markup: {
                         inline_keyboard: [

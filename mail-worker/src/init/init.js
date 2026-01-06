@@ -32,7 +32,10 @@ const init = {
 
 	async v2_6DB(c) {
 		try {
-			await c.env.db.prepare(`ALTER TABLE account ADD COLUMN all_receive INTEGER NOT NULL DEFAULT 0;`).run();
+			const col = await c.env.db.prepare("SELECT name FROM pragma_table_info('account') WHERE name = 'all_receive'").first();
+			if (!col) {
+				await c.env.db.prepare(`ALTER TABLE account ADD COLUMN all_receive INTEGER NOT NULL DEFAULT 0;`).run();
+			}
 		} catch (e) {
 			console.error(e)
 		}
