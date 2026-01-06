@@ -92,7 +92,7 @@ const telegramService = {
 
             if (!res.ok) {
                 const errorText = await res.text();
-                console.error(`Telegram failed: chatId=${chatId}, status=${res.status}, error=${errorText}`);
+                console.error(`Telegram failed: chatId=${chatId}, status=${res.status}, response=${errorText}`);
             }
         } catch (e) {
             console.error(`Telegram forward failed: chatId=${chatId}`, e.message);
