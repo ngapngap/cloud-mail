@@ -102,7 +102,7 @@ jobs:
           printf '%s' "$LINUXDO_CALLBACK_URL" | npx wrangler secret put LINUXDO_CALLBACK_URL -c "$CONFIG_FILE"
           printf '%s' "$LINUXDO_SWITCH" | npx wrangler secret put LINUXDO_SWITCH -c "$CONFIG_FILE"
           echo "🚀 Configuration updated. Starting deployment..."
-          npx wrangler deploy | tee deploy.log | grep -v "https://.*\.workers\.dev"
+          npx wrangler deploy -c "$CONFIG_FILE" | tee deploy.log | grep -v "https://.*\.workers\.dev"
           WORKER_URL=$(grep -o "https://.*\.workers\.dev" deploy.log)
           echo "::add-mask::$WORKER_URL"
           echo "worker_url=$WORKER_URL" >> $GITHUB_OUTPUT
