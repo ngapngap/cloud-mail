@@ -46,24 +46,18 @@ const telegramService = {
 	async sendEmailToBot(c, email) {
 	   const { tgBotToken, tgChatId, customDomain, tgMsgTo, tgMsgFrom, tgMsgText } = await settingService.query(c);
 
-	   const escapeMd = (text = '') => text
-	       .replace(/_/g, '\\_')
-	       .replace(/\*/g, '\\*')
-	       .replace(/`/g, '\\`')
-	       .replace(/\[/g, '\\[')
-	       .replace(/\]/g, '\\]')
-	       .replace(/\(/g, '\\(')
-	       .replace(/\)/g, '\\)')
-	       .replace(/>/g, '\\>')
-	       .replace(/#/g, '\\#')
-	       .replace(/\+/g, '\\+')
-	       .replace(/-/g, '\\-')
-	       .replace(/=/g, '\\=')
-	       .replace(/\|/g, '\\|')
-	       .replace(/\{/g, '\\{')
-	       .replace(/\}/g, '\\}')
-	       .replace(/\./g, '\\.')
-	       .replace(/!/g, '\\!');
+	   const toTelegramHtml = (content = '') => {
+	       return content
+	           .replace(/<\s*br\s*\/?>/gi, '\n')
+	           .replace(/<\s*\/p\s*>/gi, '\n\n')
+	           .replace(/<\s*p[^>]*>/gi, '')
+	           .replace(/<\s*strong\s*>/gi, '<b>')
+	           .replace(/<\s*\/strong\s*>/gi, '</b>')
+	           .replace(/<\s*em\s*>/gi, '<i>')
+	           .replace(/<\s*\/em\s*>/gi, '</i>')
+	           .replace(/<(?!\/?(b|strong|i|em|u|a|code|pre)\b)[^>]+>/gi, '')
+	           .trim();
+	   };
 
 	   // ✅ Fix 1: Trim whitespace và convert sang number
 	   const tgChatIds = tgChatId.split(',').map(id => {
@@ -82,13 +76,10 @@ const telegramService = {
                 return;
             }
 
-            const messageText = emailMsgTemplate(email, tgMsgTo, tgMsgFrom, tgMsgText);
-            
-            // ✅ Format MarkdownV2 đơn giản, loại bỏ khoảng trắng thừa và escape
-            const safeText = escapeMd(messageText)
+            const htmlMessage = emailMsgTemplate(email, tgMsgTo, tgMsgFrom, tgMsgText);
+            const safeHtml = toTelegramHtml(htmlMessage)
                 .replace(/\n{3,}/g, '\n\n')
-                .trim()
-                .substring(0, 4000); // giữ dưới giới hạn Telegram
+                .trim();
  
             const res = await fetch(`https://api.telegram.org/bot${tgBotToken}/sendMessage`, {
                 method: 'POST',
@@ -97,8 +88,8 @@ const telegramService = {
                 },
                 body: JSON.stringify({
                     chat_id: Number(chatId),
-                    parse_mode: 'MarkdownV2',
-                    text: safeText,
+                    parse_mode: 'HTML',
+                    text: safeHtml,
                     reply_markup: {
                         inline_keyboard: [
                             [
