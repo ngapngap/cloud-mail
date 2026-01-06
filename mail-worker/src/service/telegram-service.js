@@ -44,13 +44,32 @@ const telegramService = {
 	},
 
 	async sendEmailToBot(c, email) {
-    const { tgBotToken, tgChatId, customDomain, tgMsgTo, tgMsgFrom, tgMsgText } = await settingService.query(c);
+	   const { tgBotToken, tgChatId, customDomain, tgMsgTo, tgMsgFrom, tgMsgText } = await settingService.query(c);
 
-    // ✅ Fix 1: Trim whitespace và convert sang number
-    const tgChatIds = tgChatId.split(',').map(id => {
-        const trimmedId = id.trim();
-        return isNaN(trimmedId) ? trimmedId : Number(trimmedId);
-    });
+	   const escapeMd = (text = '') => text
+	       .replace(/_/g, '\\_')
+	       .replace(/\*/g, '\\*')
+	       .replace(/`/g, '\\`')
+	       .replace(/\[/g, '\\[')
+	       .replace(/\]/g, '\\]')
+	       .replace(/\(/g, '\\(')
+	       .replace(/\)/g, '\\)')
+	       .replace(/>/g, '\\>')
+	       .replace(/#/g, '\\#')
+	       .replace(/\+/g, '\\+')
+	       .replace(/-/g, '\\-')
+	       .replace(/=/g, '\\=')
+	       .replace(/\|/g, '\\|')
+	       .replace(/\{/g, '\\{')
+	       .replace(/\}/g, '\\}')
+	       .replace(/\./g, '\\.')
+	       .replace(/!/g, '\\!');
+
+	   // ✅ Fix 1: Trim whitespace và convert sang number
+	   const tgChatIds = tgChatId.split(',').map(id => {
+	       const trimmedId = id.trim();
+	       return isNaN(trimmedId) ? trimmedId : Number(trimmedId);
+	   });
 
     const jwtToken = await jwtUtils.generateToken(c, { emailId: email.emailId })
     const webAppUrl = customDomain ? `${domainUtils.toOssDomain(customDomain)}/api/telegram/getEmail/${jwtToken}` : null;
@@ -65,9 +84,12 @@ const telegramService = {
 
             const messageText = emailMsgTemplate(email, tgMsgTo, tgMsgFrom, tgMsgText);
             
-            // ✅ Fix 3: Truncate message nếu quá dài (Telegram limit 4096)
-            const truncatedText = messageText.substring(0, 4096);
-
+            // ✅ Format MarkdownV2 đơn giản, loại bỏ khoảng trắng thừa và escape
+            const safeText = escapeMd(messageText)
+                .replace(/\n{3,}/g, '\n\n')
+                .trim()
+                .substring(0, 4000); // giữ dưới giới hạn Telegram
+ 
             const res = await fetch(`https://api.telegram.org/bot${tgBotToken}/sendMessage`, {
                 method: 'POST',
                 headers: {
@@ -75,8 +97,8 @@ const telegramService = {
                 },
                 body: JSON.stringify({
                     chat_id: Number(chatId),
-                    // Gửi plain text để tránh lỗi parse_mode với thẻ br
-                    text: truncatedText,
+                    parse_mode: 'MarkdownV2',
+                    text: safeText,
                     reply_markup: {
                         inline_keyboard: [
                             [
